@@ -10,7 +10,9 @@ require (
 )
 
 require (
+	github.com/go-ozzo/ozzo-validation v3.6.0+incompatible // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/mattn/go-sqlite3 v1.14.19 // indirect
+	github.com/oramaz/telebot-calendar v0.0.0-20230417132244-7525a3db3134 // indirect
 )

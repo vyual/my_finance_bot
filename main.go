@@ -2,13 +2,14 @@ package main
 
 import (
 	"fmt"
+	tbcal "github.com/oramaz/telebot-calendar"
+	tele "gopkg.in/telebot.v3"
 	"log"
+	"my_finance_bot/keyboards/reply"
 	"os"
 	"strconv"
 	"strings"
 	"time"
-
-	tele "gopkg.in/telebot.v3"
 
 	"github.com/joho/godotenv"
 )
@@ -39,26 +40,14 @@ func main() {
 
 	var (
 		// Universal markup builders.
-		menu     = &tele.ReplyMarkup{ResizeKeyboard: true}
+		mainMenu = reply.BuildMainMenu()
 		selector = &tele.ReplyMarkup{}
-
-		// Reply buttons.
-		btnShowMovementTypes = menu.Text("➕ Добавить/➖ Убрать")
-
-		btnShowMovements = menu.Text("📈 Показать передвижения")
-
-		btnShowBalance = menu.Text("💰 Показать текущий баланс")
 
 		// Inline buttons.
 		btnPrev = selector.Data("⬅", "prev")
 		btnNext = selector.Data("➡", "next")
 	)
 
-	menu.Reply(
-		menu.Row(btnShowMovementTypes),
-		menu.Row(btnShowMovements),
-		menu.Row(btnShowBalance),
-	)
 	selector.Inline(
 		selector.Row(btnPrev, btnNext),
 	)
@@ -69,14 +58,14 @@ func main() {
 			log.Println(result.Error)
 			return c.Send(
 				"Добрый день! Это бот для учета финансов. Подскажите, что вы хотите сделать?",
-				menu)
+				mainMenu)
 		}
 		answer := fmt.Sprintf("С возвращением! Что вам нужно?")
-		return c.Send(answer, menu)
+		return c.Send(answer, mainMenu)
 	})
 
 	// TODO добавить FSM
-	b.Handle(btnShowMovementTypes.Text, func(c tele.Context) error {
+	b.Handle(reply.BtnShowMovementTypes.Text, func(c tele.Context) error {
 		return c.Send(
 			"Чтобы добавить доход, напишите:\n"+
 				"ДОХОД <категория> <количество>\n\n"+
@@ -86,7 +75,7 @@ func main() {
 				"КОПИЛКА <категория> <количество>\n\n"+
 				"Чтобы убрать накопление, напишите:\n"+
 				"-КОПИЛКА <категория> <количество>\n\n",
-			menu,
+			mainMenu,
 		)
 	})
 
@@ -94,18 +83,21 @@ func main() {
 	// TODO клавиатура выбора промежутка времени
 	// TODO выбор по типу передвижений
 	// TODO выбор по категории
-	b.Handle(btnShowMovements.Text, func(c tele.Context) error {
+	b.Handle(reply.BtnShowMovements.Text, func(c tele.Context) error {
+
+		calendar := tbcal.NewCalendar(b, tbcal.Options{})
 		return c.Send(
-			"Ваши денежные передвижения за:\n\n" +
-				"- Сегодня\n" +
-				"- Месяц\n" +
+			"Ваши денежные передвижения за:\n\n"+
+				"- Сегодня\n"+
+				"- Месяц\n"+
 				"- Год\n",
+			&tele.ReplyMarkup{InlineKeyboard: calendar.GetKeyboard()},
 		)
 	})
 
 	// TODO добавить FSM
 	// TODO клавиатура выбора промежутка времени
-	b.Handle(btnShowBalance.Text, func(c tele.Context) error {
+	b.Handle(reply.BtnShowBalance.Text, func(c tele.Context) error {
 		user := GetUserByTelegramId(db, c.Sender().ID)
 		answer := fmt.Sprintf("Ваш баланс: %d руб.\n\n"+
 			"Выйти в меню: /start", user.Balance)
@@ -121,6 +113,7 @@ func main() {
 			user    = GetUserByTelegramId(db, c.Message().Sender.ID)
 			textArr = strings.Split(c.Text(), " ")
 		)
+		log.Println(c.Data())
 		moneyMovementTypeString := textArr[0]
 		switch moneyMovementTypeString {
 		case "ДОХОД":
